@@ -1,0 +1,19 @@
+services:
+  filebrowser:
+    container_name: "filebrowser"
+    image: hurlenko/filebrowser
+    user: "${UID}:${GID}"
+    ports:
+      - 8888:8080
+    volumes:
+      - /container_data/filebrowser/data:/data
+      - /container_data/filebrowser/config:/config
+    environment:
+      - FB_BASEURL=/filebrowser
+    restart: always
+    networks:
+      - proxy_network
+
+networks:
+  proxy_network:
+    external: true

@@ -1,0 +1,85 @@
+x-common:
+  database:
+    # Do not remove the "&db-password" from the end of the line below, it is important
+    # for Panel functionality.
+    &db-environment
+    MYSQL_PASSWORD: &db-password "tmp_mdp"
+    MYSQL_ROOT_PASSWORD: "tmp_mdp"
+  panel:
+    # This URL should be the URL that your reverse proxy routes to the panel server
+    &panel-environment
+    APP_URL: "https://pterodactyl.skyserver.fr"
+    # A list of valid timezones can be found here: http://php.net/manual/en/timezones.php
+    APP_TIMEZONE: "Europe/Paris"
+    APP_SERVICE_AUTHOR: "admin@skyserver.fr"
+    TRUSTED_PROXIES: "*"
+#
+# ------------------------------------------------------------------------------------------
+# DANGER ZONE BELOW
+#
+# The remainder of this file likely does not need to be changed. Please only make modifications
+# below if you understand what you are doing.
+#
+services:
+  database:
+    container_name: "pterodactyl-database"
+    image: mariadb:10.5
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+    - "/container_data/pterodactyl/panel/database:/var/lib/mysql"
+    environment:
+      <<: *db-environment
+      MYSQL_DATABASE: "panel"
+      MYSQL_USER: "pterodactyl"
+    networks:
+    - ptero-network
+
+  cache:
+    container_name: "pterodactyl-cache"
+    image: redis:alpine
+    restart: always
+    networks:
+    - ptero-network
+
+  panel:
+    container_name: "pterodactyl-panel"
+    image: ghcr.io/pterodactyl/panel:latest
+    restart: always
+    #ports:
+    #    - "80:80"
+    #    - "443:443"
+    links:
+    - database
+    - cache
+    volumes:
+    - "/container_data/pterodactyl/panel/var/:/app/var/"
+    - "/container_data/pterodactyl/panel/nginx/:/etc/nginx/http.d/"
+    - "/container_data/pterodactyl/panel/certs/:/etc/letsencrypt/"
+    - "/container_data/pterodactyl/panel/logs/:/app/storage/logs"
+    environment:
+      <<: [ *panel-environment ]
+      DB_PASSWORD: *db-password
+      APP_ENV: "production"
+      APP_ENVIRONMENT_ONLY: "false"
+      CACHE_DRIVER: "redis"
+      SESSION_DRIVER: "redis"
+      QUEUE_DRIVER: "redis"
+      REDIS_HOST: "pterodactyl-cache"
+      DB_HOST: "pterodactyl-database"
+      DB_PORT: "3306"
+
+    networks:
+    - ptero-network
+    - proxy_network
+
+networks:
+  ptero-network:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 172.16.0.8/29
+
+  proxy_network:
+    name: proxy_network
+    external: true
