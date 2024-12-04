@@ -1,4 +1,4 @@
-# portainer-stacks
+# Portainer Stacks
 
 > Liste des stacks pour mon VPS Debian qui tourne sous portainer 
 
